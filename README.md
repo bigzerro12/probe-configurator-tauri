@@ -4,23 +4,31 @@ Cross-platform desktop app for managing SEGGER J-Link probes, built with **Tauri
 
 ## Release and download
 
-**Installers** are published under the repo’s **Releases** page on GitHub (open the repository, then **Releases** in the sidebar). New builds are produced when you push a version tag (details in **CI/CD** below). Each run creates a **draft** release — **Publish release** when you are ready for it to be public.
+**Installers** appear on the repo **Releases** tab (same idea as [probe-configurator-electron releases](https://github.com/bigzerro12/probe-configurator-electron/releases/tag/v1.0.0)): attached **Assets** per OS after a successful publish.
+
+**Two different things in Actions**
+
+| What | Workflow | When | Where files show up |
+|------|-----------|------|---------------------|
+| **CI** | `CI` | Every push / PR to `main` | **Actions** run → **Artifacts** (zip of `bundle/`, expires) |
+| **Release** | `Release` | Only when you push a **`v*`** tag (e.g. `v1.0.0`) | **Releases** page → permanent **Assets** (.exe, .msi, .dmg, .deb, .AppImage, …) |
+
+There is no “release job” inside **CI** on purpose: shipping to **Releases** is the separate **Release** workflow.
 
 **Ship a version (maintainers):**
 
-1. Ensure **`main`** is green in Actions (**CI** workflow).
-2. Set the same **semver** in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit, and push to `main` if you bumped the version.
-3. Create and push the tag (example for first public `1.0.0`):
+1. Ensure **`main`** is green (**CI** workflow).
+2. Align **semver** in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit, push to `main` if you changed the version.
+3. Tag and push (new tag each release):
    ```bash
-   git checkout main
-   git pull
-   git tag v1.0.0
-   git push origin v1.0.0
+   git checkout main && git pull
+   git tag v1.0.1
+   git push origin v1.0.1
    ```
-4. Open **Actions** → **Release** and wait for all four builds (Windows, Linux, macOS Intel, macOS Apple Silicon).
-5. Open **Releases** → the new **draft** → add notes → **Publish release**.
+4. **Actions** → workflow **Release** → wait for four jobs (**windows-x64**, **linux-x64**, **macos-x64**, **macos-aarch64**).
+5. Open **Releases** — the version should be **published** automatically with generated notes (configure repo **Actions** → **Workflow permissions** → **Read and write** if uploads fail).
 
-If the tag already exists, use a new version (e.g. `v1.0.1`) instead of re-pushing the same tag.
+If you already pushed a tag and saw no **Release** run: check **Actions** is enabled and permissions allow writing releases; re-run failed jobs or fix errors, then use a **new** tag after fixing (you cannot re-use the same tag for a new build).
 
 ## Technology stack
 
@@ -257,11 +265,11 @@ Workflows live under [`.github/workflows/`](.github/workflows/).
 | Workflow | When it runs | What it does |
 |----------|----------------|--------------|
 | **`ci.yml`** | Push or pull request to **`main`** | Builds the frontend and runs **`yarn tauri:build`** on **Ubuntu 22.04**, **Windows**, and **macOS**. Uploads **`src-tauri/target/release/bundle/`** as a workflow artifact per OS (installers vary by platform). |
-| **`release.yml`** | Push a **Git tag** matching **`v*`** (e.g. `v1.0.1`) | Uses **[`tauri-action`](https://github.com/tauri-apps/tauri-action)** to build (including macOS **x64** and **ARM** targets) and attach binaries to a **draft** GitHub Release named after the tag. |
+| **`release.yml`** | Push a **Git tag** matching **`v*`** (e.g. `v1.0.1`) | Uses **[`tauri-action`](https://github.com/tauri-apps/tauri-action)** to build (Windows, Linux, macOS Intel + Apple Silicon) and attach installers to a **published** GitHub Release with **auto-generated release notes**. |
 
 **Repository setting (required for releases):** GitHub → **Settings** → **Actions** → **General** → **Workflow permissions** → enable **Read and write permissions**. Without this, `release.yml` may fail when creating the release or uploading assets.
 
-Step-by-step tagging and publishing are in **[Release and download](#release-and-download)** above. After the workflow finishes, installers appear under the draft release **Assets** (e.g. `.exe`/`.msi`, `.dmg`, `.deb`/`.AppImage`, depending on platform). Unsigned builds may trigger SmartScreen or Gatekeeper warnings until you add code signing.
+Step-by-step tagging and publishing are in **[Release and download](#release-and-download)** above. After the workflow finishes, installers appear on the **Releases** page under **Assets** (e.g. `.exe`/`.msi`, `.dmg`, `.deb`/`.AppImage`, depending on platform). Unsigned builds may trigger SmartScreen or Gatekeeper warnings until you add code signing.
 
 **Version bumps (next releases):** keep the same semver in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (no `v` prefix), commit on `main`, then push a **new** tag (e.g. `v1.0.1`).
 

@@ -1,4 +1,5 @@
-# Build installers and create/update a GitHub Release when you push a version tag (e.g. v1.0.1).
+# Published GitHub Releases (installers on the Releases tab), same idea as electron-builder publish.
+# Triggers only on version tags — unlike CI, this does not run on every push to main.
 # Requires: Settings → Actions → General → Workflow permissions → Read and write.
 name: Release
 
@@ -12,17 +13,22 @@ permissions:
 
 jobs:
   publish:
+    name: ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
+            name: macos-aarch64
             args: "--target aarch64-apple-darwin"
           - platform: macos-latest
+            name: macos-x64
             args: "--target x86_64-apple-darwin"
           - platform: ubuntu-22.04
+            name: linux-x64
             args: ""
           - platform: windows-latest
+            name: windows-x64
             args: ""
 
     runs-on: ${{ matrix.platform }}
@@ -67,8 +73,14 @@ jobs:
           # Same as CI: use @tauri-apps/cli from node_modules (not cargo-tauri).
           tauriScript: yarn tauri
           tagName: ${{ github.ref_name }}
-          releaseName: "ProbeConfigurator ${{ github.ref_name }}"
-          releaseBody: "Installers built from tag ${{ github.ref_name }}. See assets below."
-          releaseDraft: true
+          # Match typical GitHub release title (e.g. probe-configurator-electron style).
+          releaseName: ${{ github.ref_name }}
+          releaseBody: |
+            **ProbeConfigurator** — installers attached below per platform (Windows, Linux, macOS Intel, macOS Apple Silicon).
+
+            Built from tag `${{ github.ref_name }}`. Unsigned builds may show SmartScreen / Gatekeeper warnings until code signing is configured.
+          generateReleaseNotes: true
+          # Public release on the Releases tab (like electron releases), not a hidden draft.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

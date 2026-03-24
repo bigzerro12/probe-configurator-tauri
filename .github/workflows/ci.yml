@@ -1,4 +1,5 @@
-# Cross-platform compile + bundle smoke test on every push/PR to main.
+# Cross-platform build smoke test on every push/PR to main.
+# Does NOT create GitHub Releases — see release.yml (runs on v* tags only).
 name: CI
 
 on:
