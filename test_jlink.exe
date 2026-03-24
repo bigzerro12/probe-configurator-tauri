@@ -1,0 +1,22 @@
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Connection: keep-alive
+Date: Wed, 18 Mar 2026 07:16:37 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Cache-Control: max-age=0, private, must-revalidate
+Pragma: no-cache
+Content-Security-Policy: img-src 'self' data: 'unsafe-inline' https://t.segger.com/; style-src 'self' 'unsafe-inline' ; style-src-elem  'self' 'unsafe-inline' ; script-src 'self' 'unsafe-inline' https://t.segger.com/; script-src-elem 'self' 'unsafe-inline'  https://t.segger.com/; report-uri https://sentry.marketing-factory.de/api/23/security/?sentry_key=c95fa11bd7c34b6757a4f34eca12437f;
+Content-Security-Policy-Report-Only: img-src 'self' data: 'unsafe-inline'  https://t.segger.com/;  style-src 'self' 'unsafe-inline' ;  style-src-elem 'self' 'unsafe-inline' ;  script-src 'self' 'unsafe-inline' https://t.segger.com/;  script-src-elem 'self' 'unsafe-inline' https://t.segger.com/;  report-uri https://sentry.marketing-factory.de/api/23/security/?sentry_key=c95fa11bd7c34b6757a4f34eca12437f;
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Set-Cookie: PHPSESSID=87507bf9b03c24d8d4b6a8e79cdcd6cb; path=/
+X-Content-Type-Options: nosniff
+X-UA-Compatible: IE=edge
+X-Cache: Miss from cloudfront
+Via: 1.1 ba725da875f43fb311efeb484e55ed1a.cloudfront.net (CloudFront)
+X-Amz-Cf-Pop: ICN57-P2
+Alt-Svc: h3=":443"; ma=86400
+X-Amz-Cf-Id: qCtzBJkDJYGiEHYdaM8709r72L2tkXWQD3bgcM9_K_xBx7JjfAFiww==
+

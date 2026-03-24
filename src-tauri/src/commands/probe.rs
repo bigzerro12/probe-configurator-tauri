@@ -1,0 +1,88 @@
+//! Tauri commands for probe operations.
+//! Thin wrappers that delegate to the jlink subsystem.
+
+use tauri::State;
+use crate::error::AppError;
+use crate::jlink::{self, types::{Probe, FirmwareUpdateResult, NicknameResult, UsbDriverMode, UsbDriverResult}};
+use crate::state::JLinkState;
+
+/// Combined detect + scan — called on app startup and after install.
+#[tauri::command]
+pub async fn detect_and_scan(
+    state: State<'_, JLinkState>,
+) -> Result<serde_json::Value, AppError> {
+    log::info!("[cmd] detect_and_scan");
+
+    let status = tokio::task::spawn_blocking(jlink::detect::detect).await?;
+
+    if status.installed {
+        let cfg = crate::platform::config();
+        let bin = if jlink::runner::run(cfg.jlink_bin, "Exit\n").is_ok() {
+            cfg.jlink_bin.to_string()
+        } else if let Some(path) = status.path.as_deref() {
+            path.to_string()
+        } else {
+            cfg.jlink_bin.to_string()
+        };
+        state.set(bin);
+    }
+
+    let probes = if status.installed {
+        let bin = state.get();
+        tokio::task::spawn_blocking(move || jlink::scan::scan_probes(&bin)).await??
+    } else {
+        vec![]
+    };
+
+    Ok(serde_json::json!({ "status": status, "probes": probes }))
+}
+
+/// Scan probes only (J-Link already known to be installed).
+#[tauri::command]
+pub async fn scan_probes(
+    state: State<'_, JLinkState>,
+) -> Result<Vec<Probe>, AppError> {
+    log::info!("[cmd] scan_probes");
+    let bin = state.get();
+    tokio::task::spawn_blocking(move || jlink::scan::scan_probes(&bin))
+        .await?
+}
+
+/// Switch USB driver for the probe at given index.
+/// mode: "winUsb" → WebUSBEnable, "segger" → WebUSBDisable
+#[tauri::command]
+pub async fn switch_usb_driver(
+    probe_index: usize,
+    mode: UsbDriverMode,
+    state: State<'_, JLinkState>,
+) -> Result<UsbDriverResult, AppError> {
+    log::info!("[cmd] switch_usb_driver probe_index={} mode={:?}", probe_index, mode);
+    let bin = state.get();
+    Ok(tokio::task::spawn_blocking(move || jlink::usb_driver::switch(&bin, probe_index, mode))
+        .await?)
+}
+
+/// Update firmware for the probe at given index.
+#[tauri::command]
+pub async fn update_firmware(
+    probe_index: usize,
+    state: State<'_, JLinkState>,
+) -> Result<FirmwareUpdateResult, AppError> {
+    log::info!("[cmd] update_firmware probe_index={}", probe_index);
+    let bin = state.get();
+    Ok(tokio::task::spawn_blocking(move || jlink::firmware::update(&bin, probe_index))
+        .await?)
+}
+
+/// Set or clear nickname for the probe at given index.
+#[tauri::command]
+pub async fn set_nickname(
+    probe_index: usize,
+    nickname: String,
+    state: State<'_, JLinkState>,
+) -> Result<NicknameResult, AppError> {
+    log::info!("[cmd] set_nickname probe_index={} nickname=\"{}\"", probe_index, nickname);
+    let bin = state.get();
+    Ok(tokio::task::spawn_blocking(move || jlink::nickname::set(&bin, probe_index, &nickname))
+        .await?)
+}

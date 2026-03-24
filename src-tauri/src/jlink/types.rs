@@ -1,0 +1,52 @@
+//! Shared types for JLink operations.
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Probe {
+    pub id: String,
+    #[serde(rename = "serialNumber")]
+    pub serial_number: String,
+    #[serde(rename = "productName")]
+    pub product_name: String,
+    #[serde(rename = "nickName")]
+    pub nick_name: String,
+    pub provider: String,
+    pub connection: String,
+    pub driver: String,
+    pub firmware: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallStatus {
+    pub installed: bool,
+    pub path: Option<String>,
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum FirmwareUpdateResult {
+    Updated { firmware: String },
+    Current { firmware: String },
+    Failed { error: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NicknameResult {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsbDriverResult {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum UsbDriverMode {
+    WinUsb,
+    Segger,
+}
