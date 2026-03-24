@@ -145,8 +145,11 @@ jobs:
           draft: false
           generate_release_notes: true
           files: |
-            bundle-windows/**/*
-            bundle-macos/**/*
-            bundle-linux/**/*
+            bundle-windows/**/*.msi
+            bundle-windows/**/*.exe
+            bundle-macos/**/*.dmg
+            bundle-macos/**/*.app.tar.gz
+            bundle-linux/**/*.AppImage
+            bundle-linux/**/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
