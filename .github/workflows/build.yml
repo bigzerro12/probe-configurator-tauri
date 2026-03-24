@@ -44,9 +44,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # macos-latest = Apple Silicon. Native `tauri build` (no --target) uses host aarch64 and
-  # matches DMG tooling; explicit --target aarch64-apple-darwin still trips bundle_dmg.sh on some runners.
-  build-macos-aarch64:
+  # GitHub-hosted Intel macOS runners (e.g. macos-13) are gone. One Apple Silicon runner builds a
+  # fat/universal binary (aarch64 + x86_64) so Intel and Apple Silicon Macs get a single DMG/.app.
+  build-macos:
     runs-on: macos-latest
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -59,6 +59,8 @@ jobs:
           cache: yarn
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -67,53 +69,16 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Build & package (macOS Apple Silicon)
-        run: yarn tauri:build
+      - name: Build & package (macOS universal)
+        run: yarn tauri:build -- --target universal-apple-darwin
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bundle-macos-aarch64
+          name: bundle-macos
           path: |
-            src-tauri/target/release/bundle/dmg/
-            src-tauri/target/release/bundle/macos/
-          if-no-files-found: warn
-          retention-days: 14
-
-  # Intel DMG: must run on an x86_64 runner. macos-latest is Apple Silicon — cross-compiled
-  # x86_64 builds often fail in bundle_dmg.sh; macos-13 is GitHub's Intel macOS image.
-  build-macos-x64:
-    runs-on: macos-13
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ./src-tauri
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      # Native x86_64 build (no --target). Cross-target DMG bundling on arm64 hosts often breaks bundle_dmg.sh.
-      - name: Build & package (macOS Intel)
-        run: yarn tauri:build
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-macos-x64
-          path: |
-            src-tauri/target/release/bundle/dmg/
-            src-tauri/target/release/bundle/macos/
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/
           if-no-files-found: warn
           retention-days: 14
 
@@ -162,8 +127,7 @@ jobs:
   release:
     needs:
       - build-windows
-      - build-macos-aarch64
-      - build-macos-x64
+      - build-macos
       - build-linux
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
@@ -182,8 +146,7 @@ jobs:
           generate_release_notes: true
           files: |
             bundle-windows/**/*
-            bundle-macos-aarch64/**/*
-            bundle-macos-x64/**/*
+            bundle-macos/**/*
             bundle-linux/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

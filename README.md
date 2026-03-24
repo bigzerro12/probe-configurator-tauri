@@ -11,7 +11,7 @@ Cross-platform desktop app for managing SEGGER J-Link probes, built with **Tauri
 | What | Workflow | When | Where files show up |
 |------|-----------|------|---------------------|
 | **CI** | `CI` | Every push / PR to `main` | **Actions** run → **Artifacts** (bundle tree, short retention) |
-| **Build + release** | `Build ProbeConfigurator` | Push a **`v*`** tag or **workflow_dispatch** | Four **build** jobs upload installers; one **`release`** job creates a **single** GitHub Release (same pattern as [Electron build + softprops/action-gh-release](https://github.com/softprops/action-gh-release)) |
+| **Build + release** | `Build ProbeConfigurator` | Push a **`v*`** tag or **workflow_dispatch** | Three **build** jobs (Windows, Linux, macOS universal) upload installers; one **`release`** job creates a **single** GitHub Release (same pattern as [Electron build + softprops/action-gh-release](https://github.com/softprops/action-gh-release)) |
 
 Shipping to the **Releases** tab is intentionally **not** part of **CI**: tags run **`build.yml`**, which ends with one **`release`** job after all platforms succeed (no per-matrix fight over the same release).
 
@@ -25,7 +25,7 @@ Shipping to the **Releases** tab is intentionally **not** part of **CI**: tags r
    git tag v1.0.1
    git push origin v1.0.1
    ```
-4. **Actions** → **Build ProbeConfigurator** → wait for **build-windows**, **build-linux**, **build-macos-aarch64**, **build-macos-x64**, then **release**.
+4. **Actions** → **Build ProbeConfigurator** → wait for **build-windows**, **build-linux**, **build-macos** (universal Intel + Apple Silicon), then **release**.
 5. Open **Releases** — the run creates a **published** release with **generate_release_notes** (set **Workflow permissions** → **Read and write** if uploads fail).
 
 **Manual test without a tag:** **Actions** → **Build ProbeConfigurator** → **Run workflow** — build jobs run; the **`release`** step is skipped unless `github.ref` is a tag (`refs/tags/v*`).
@@ -267,7 +267,7 @@ Workflows live under [`.github/workflows/`](.github/workflows/).
 | Workflow | When it runs | What it does |
 |----------|----------------|--------------|
 | **`ci.yml`** | Push or pull request to **`main`** | Builds the frontend and runs **`yarn tauri:build`** on **Ubuntu 22.04**, **Windows**, and **macOS**. Uploads **`src-tauri/target/release/bundle/`** as a workflow artifact per OS. |
-| **`build.yml`** (**Build ProbeConfigurator**) | **`v*`** tags or **`workflow_dispatch`** | **Electron-style:** parallel **build-*** jobs (Windows, Linux, macOS ARM + Intel), then **`release`** runs **[`softprops/action-gh-release`](https://github.com/softprops/action-gh-release)** once with `generate_release_notes` and all installers attached. |
+| **`build.yml`** (**Build ProbeConfigurator**) | **`v*`** tags or **`workflow_dispatch`** | **Electron-style:** parallel **build-*** jobs (Windows, Linux, macOS **universal** `universal-apple-darwin` on `macos-latest`), then **`release`** runs **[`softprops/action-gh-release`](https://github.com/softprops/action-gh-release)** once with `generate_release_notes` and all installers attached. |
 
 **Why not only `tauri-action` on a matrix?** Each matrix leg can try to manage the same GitHub Release; aggregating artifacts in a final **`release`** job matches common desktop-app CI and your Electron `build.yml`.
 
