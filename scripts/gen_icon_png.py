@@ -1,4 +1,4 @@
-"""Emit a minimal 1024x1024 RGB PNG (solid color) for `cargo tauri icon`."""
+"""Emit a minimal 1024x1024 RGB PNG (solid color) for `yarn tauri icon` / `npx tauri icon`."""
 import struct
 import zlib
 

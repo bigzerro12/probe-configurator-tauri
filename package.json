@@ -11,8 +11,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "tauri": "tauri",
-    "tauri:dev": "cargo tauri dev",
-    "tauri:build": "cargo tauri build",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -48,7 +48,7 @@ This project is a **Tauri 2** app. You need a working **Node.js** toolchain for 
 | **Node.js** | **LTS**, v20 or newer (matches `package.json` / CI expectations). [nodejs.org](https://nodejs.org/) |
 | **Yarn** | **Classic Yarn v1** (`yarn --version` ≈ 1.22.x). Install: `npm install -g yarn` if needed. The repo uses `yarn.lock`. |
 | **Rust** | **Stable** channel via [rustup](https://rustup.rs/). After install: `rustc --version` and `cargo --version` should work in the same terminal you use for development. |
-| **Tauri CLI** | Invoked as `cargo tauri` from the scripts in `package.json` — ensure Rust/Cargo is on your `PATH`. Optionally: `cargo install tauri-cli` for a standalone `tauri` binary if you prefer. |
+| **Tauri CLI** | **`@tauri-apps/cli`** (devDependency). Scripts use **`yarn tauri dev`** / **`yarn tauri build`**, which run the local CLI after `yarn install`. Optionally install globally: `cargo install tauri-cli` and use `cargo tauri …` instead. |
 | **SEGGER J-Link** | Not required to *compile* the app, but required to *use* probe features. The install screen can download J-Link on supported platforms. |
 
 **Verify your environment** (from any directory):
@@ -103,7 +103,7 @@ yarn tauri:dev
 What this does (see `src-tauri/tauri.conf.json`):
 
 1. Runs **`yarn dev`** — starts the **Vite** dev server (default `http://localhost:5173/`).
-2. Runs **`cargo tauri dev`** — compiles the Rust crate and opens the desktop window pointed at that URL.
+2. Runs **`tauri dev`** (via `yarn tauri:dev`) — compiles the Rust crate and opens the desktop window pointed at that URL.
 
 The **first** run can take several minutes while Cargo downloads and compiles dependencies; later runs are much faster.
 
@@ -126,7 +126,7 @@ yarn tauri:build
 This runs, in order:
 
 1. **`yarn build`** — TypeScript + Vite production bundle (output is `out/renderer` at repo root, as referenced from `src-tauri/tauri.conf.json`).
-2. **`cargo tauri build`** — Release native binary and platform bundles (exact artifacts depend on OS and Tauri bundle settings).
+2. **`tauri build`** (via `yarn tauri:build`) — release native binary and platform bundles (exact artifacts depend on OS and Tauri bundle settings).
 
 Outputs land under **`src-tauri/target/release/`** plus installer/bundle files Tauri emits for your platform.
 
