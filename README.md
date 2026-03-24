@@ -2,7 +2,25 @@
 
 Cross-platform desktop app for managing SEGGER J-Link probes, built with **Tauri** (Rust backend) and **React + TypeScript** (frontend).
 
-> **Platform status:** Windows is the primary tested platform. macOS/Linux builds exist but are less validated on real hardware.
+## Release and download
+
+**Installers** are published under the repo’s **Releases** page on GitHub (open the repository, then **Releases** in the sidebar). New builds are produced when you push a version tag (details in **CI/CD** below). Each run creates a **draft** release — **Publish release** when you are ready for it to be public.
+
+**Ship a version (maintainers):**
+
+1. Ensure **`main`** is green in Actions (**CI** workflow).
+2. Set the same **semver** in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit, and push to `main` if you bumped the version.
+3. Create and push the tag (example for first public `1.0.0`):
+   ```bash
+   git checkout main
+   git pull
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+4. Open **Actions** → **Release** and wait for all four builds (Windows, Linux, macOS Intel, macOS Apple Silicon).
+5. Open **Releases** → the new **draft** → add notes → **Publish release**.
+
+If the tag already exists, use a new version (e.g. `v1.0.1`) instead of re-pushing the same tag.
 
 ## Technology stack
 
