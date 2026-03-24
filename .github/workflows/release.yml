@@ -64,6 +64,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Same as CI: use @tauri-apps/cli from node_modules (not cargo-tauri).
+          tauriScript: yarn tauri
           tagName: ${{ github.ref_name }}
           releaseName: "ProbeConfigurator ${{ github.ref_name }}"
           releaseBody: "Installers built from tag ${{ github.ref_name }}. See assets below."
