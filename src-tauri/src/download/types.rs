@@ -33,7 +33,8 @@ pub struct DownloadConfig {
     pub save_tmp: PathBuf,
     /// Final path after rename (.exe/.pkg/.deb)
     pub save_final: PathBuf,
-    /// Scan path where app looks for existing installer
+    /// Scan path where app looks for existing installer (Windows `scan_for_installer` only)
+    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
     pub scan_path: PathBuf,
 }
 

@@ -80,8 +80,10 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # Intel DMG: must run on an x86_64 runner. macos-latest is Apple Silicon — cross-compiled
+  # x86_64 builds often fail in bundle_dmg.sh; macos-13 is GitHub's Intel macOS image.
   build-macos-x64:
-    runs-on: macos-latest
+    runs-on: macos-13
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
@@ -93,8 +95,6 @@ jobs:
           cache: yarn
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -103,16 +103,17 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      # Native x86_64 build (no --target). Cross-target DMG bundling on arm64 hosts often breaks bundle_dmg.sh.
       - name: Build & package (macOS Intel)
-        run: yarn tauri:build -- --target x86_64-apple-darwin
+        run: yarn tauri:build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: bundle-macos-x64
           path: |
-            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/
-            src-tauri/target/x86_64-apple-darwin/release/bundle/macos/
+            src-tauri/target/release/bundle/dmg/
+            src-tauri/target/release/bundle/macos/
           if-no-files-found: warn
           retention-days: 14
 
