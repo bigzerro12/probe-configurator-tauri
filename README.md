@@ -148,6 +148,10 @@ Omitted from the tree: **`node_modules/`**, **`src-tauri/target/`** (Cargo artif
 
 ```text
 .
+├── .github/
+│   └── workflows/              # CI (main/PR) + release (version tags)
+├── scripts/
+│   └── gen_icon_png.py         # Optional: generate a 1024² PNG for `tauri icon`
 ├── index.html                  # Vite HTML entry
 ├── package.json
 ├── yarn.lock
@@ -227,6 +231,26 @@ Omitted from the tree: **`node_modules/`**, **`src-tauri/target/`** (Cargo artif
 - The UI talks to Rust only through **`invoke`** with names from `COMMANDS` in `src/shared/types.ts`.
 - Long-running work (CLI, file IO) runs in **`spawn_blocking`** from async command handlers.
 - Downloader progress and completion are signaled with events such as `download://progress`, `download://completed`, and `download://cancelled` (consumed in `InstallJLink.tsx`).
+
+## CI/CD (GitHub Actions)
+
+Workflows live under [`.github/workflows/`](.github/workflows/).
+
+| Workflow | When it runs | What it does |
+|----------|----------------|--------------|
+| **`ci.yml`** | Push or pull request to **`main`** | Builds the frontend and runs **`yarn tauri:build`** on **Ubuntu 22.04**, **Windows**, and **macOS**. Uploads **`src-tauri/target/release/bundle/`** as a workflow artifact per OS (installers vary by platform). |
+| **`release.yml`** | Push a **Git tag** matching **`v*`** (e.g. `v1.0.1`) | Uses **[`tauri-action`](https://github.com/tauri-apps/tauri-action)** to build (including macOS **x64** and **ARM** targets) and attach binaries to a **draft** GitHub Release named after the tag. |
+
+**Repository setting (required for releases):** GitHub → **Settings** → **Actions** → **General** → **Workflow permissions** → enable **Read and write permissions** (and allow workflows to create releases). Otherwise `release.yml` may fail when creating the release or uploading assets.
+
+**Tag-based release (example):**
+
+1. Bump `version` in `src-tauri/tauri.conf.json` (and optionally `package.json`) to match the tag.
+2. Commit and push to `main`.
+3. Create and push the tag: `git tag v1.0.1` then `git push origin v1.0.1`.
+4. Open **Actions** → **Release**, confirm the run; open **Releases** and publish the draft when ready.
+
+Icons for bundling are under **`src-tauri/icons/`**. To regenerate from a 1024×1024 source PNG later: place it at `resources/icon-source.png` (un-ignore that path in `.gitignore` if needed), then from `src-tauri/` run `npx @tauri-apps/cli icon ../resources/icon-source.png`. The repo includes **`scripts/gen_icon_png.py`** as a fallback to generate a solid-color 1024×1024 PNG for that step.
 
 ## Troubleshooting
 
