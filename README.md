@@ -259,25 +259,11 @@ Workflows live under [`.github/workflows/`](.github/workflows/).
 | **`ci.yml`** | Push or pull request to **`main`** | Builds the frontend and runs **`yarn tauri:build`** on **Ubuntu 22.04**, **Windows**, and **macOS**. Uploads **`src-tauri/target/release/bundle/`** as a workflow artifact per OS (installers vary by platform). |
 | **`release.yml`** | Push a **Git tag** matching **`v*`** (e.g. `v1.0.1`) | Uses **[`tauri-action`](https://github.com/tauri-apps/tauri-action)** to build (including macOS **x64** and **ARM** targets) and attach binaries to a **draft** GitHub Release named after the tag. |
 
-**Repository setting (required for releases):** GitHub → **Settings** → **Actions** → **General** → **Workflow permissions** → enable **Read and write permissions** (and allow workflows to create releases). Otherwise `release.yml` may fail when creating the release or uploading assets.
+**Repository setting (required for releases):** GitHub → **Settings** → **Actions** → **General** → **Workflow permissions** → enable **Read and write permissions**. Without this, `release.yml` may fail when creating the release or uploading assets.
 
-**Publishing a release (end-to-end):**
+Step-by-step tagging and publishing are in **[Release and download](#release-and-download)** above. After the workflow finishes, installers appear under the draft release **Assets** (e.g. `.exe`/`.msi`, `.dmg`, `.deb`/`.AppImage`, depending on platform). Unsigned builds may trigger SmartScreen or Gatekeeper warnings until you add code signing.
 
-1. **One-time:** Repo **Settings** → **Actions** → **General** → **Workflow permissions** → **Read and write permissions** (so `release.yml` can create releases and upload assets).
-2. **Align versions** (same semver everywhere, without `v`):
-   - `src-tauri/tauri.conf.json` → `"version"`
-   - `package.json` → `"version"`
-   - `src-tauri/Cargo.toml` → `[package] version`
-3. Commit version bumps on `main` and push: `git push origin main`.
-4. **Tag** the commit you want to ship (convention: `v` + semver, e.g. `v1.0.0`):
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-   Use a **new** tag each release (if `v1.0.0` already exists, use `v1.0.1` or delete the remote tag only if you know it is safe).
-5. **Actions** → workflow **Release** → wait for all matrix jobs (macOS ×2, Linux, Windows). Failures block that platform’s assets only if `fail-fast` is false; fix and re-tag or push a new tag after fixing `main`.
-6. **Releases** → open the **draft** for that tag → edit release notes → **Publish release**.
-7. **Download / verify:** Users install from **Assets** (`.msi`/`.exe` on Windows, `.dmg`/`.app.tar.gz` on macOS, `.deb`/`.AppImage` on Linux depending on Tauri bundle targets). Unsigned builds may trigger SmartScreen / Gatekeeper warnings until you add code signing.
+**Version bumps (next releases):** keep the same semver in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (no `v` prefix), commit on `main`, then push a **new** tag (e.g. `v1.0.1`).
 
 Icons for bundling are under **`src-tauri/icons/`**. To regenerate from a 1024×1024 source PNG later: place it at `resources/icon-source.png` (un-ignore that path in `.gitignore` if needed), then from `src-tauri/` run `npx @tauri-apps/cli icon ../resources/icon-source.png`. The repo includes **`scripts/gen_icon_png.py`** as a fallback to generate a solid-color 1024×1024 PNG for that step.
 
