@@ -10,10 +10,10 @@ Cross-platform desktop app for managing SEGGER J-Link probes, built with **Tauri
 
 | What | Workflow | When | Where files show up |
 |------|-----------|------|---------------------|
-| **CI** | `CI` | Every push / PR to `main` | **Actions** run → **Artifacts** (zip of `bundle/`, expires) |
-| **Release** | `Release` | Only when you push a **`v*`** tag (e.g. `v1.0.0`) | **Releases** page → permanent **Assets** (.exe, .msi, .dmg, .deb, .AppImage, …) |
+| **CI** | `CI` | Every push / PR to `main` | **Actions** run → **Artifacts** (bundle tree, short retention) |
+| **Build + release** | `Build ProbeConfigurator` | Push a **`v*`** tag or **workflow_dispatch** | Four **build** jobs upload installers; one **`release`** job creates a **single** GitHub Release (same pattern as [Electron build + softprops/action-gh-release](https://github.com/softprops/action-gh-release)) |
 
-There is no “release job” inside **CI** on purpose: shipping to **Releases** is the separate **Release** workflow.
+Shipping to the **Releases** tab is intentionally **not** part of **CI**: tags run **`build.yml`**, which ends with one **`release`** job after all platforms succeed (no per-matrix fight over the same release).
 
 **Ship a version (maintainers):**
 
@@ -25,10 +25,12 @@ There is no “release job” inside **CI** on purpose: shipping to **Releases**
    git tag v1.0.1
    git push origin v1.0.1
    ```
-4. **Actions** → workflow **Release** → wait for four jobs (**windows-x64**, **linux-x64**, **macos-x64**, **macos-aarch64**).
-5. Open **Releases** — the version should be **published** automatically with generated notes (configure repo **Actions** → **Workflow permissions** → **Read and write** if uploads fail).
+4. **Actions** → **Build ProbeConfigurator** → wait for **build-windows**, **build-linux**, **build-macos-aarch64**, **build-macos-x64**, then **release**.
+5. Open **Releases** — the run creates a **published** release with **generate_release_notes** (set **Workflow permissions** → **Read and write** if uploads fail).
 
-If you already pushed a tag and saw no **Release** run: check **Actions** is enabled and permissions allow writing releases; re-run failed jobs or fix errors, then use a **new** tag after fixing (you cannot re-use the same tag for a new build).
+**Manual test without a tag:** **Actions** → **Build ProbeConfigurator** → **Run workflow** — build jobs run; the **`release`** step is skipped unless `github.ref` is a tag (`refs/tags/v*`).
+
+If a tag push did nothing: confirm **Actions** is enabled, permissions allow **contents: write** for the release job, and fix failed **build-*** jobs. Use a **new** tag after fixes.
 
 ## Technology stack
 
@@ -175,7 +177,7 @@ Omitted from the tree: **`node_modules/`**, **`src-tauri/target/`** (Cargo artif
 ```text
 .
 ├── .github/
-│   └── workflows/              # CI (main/PR) + release (version tags)
+│   └── workflows/              # ci.yml (main/PR) + build.yml (tags → release)
 ├── scripts/
 │   └── gen_icon_png.py         # Optional: generate a 1024² PNG for `tauri icon`
 ├── index.html                  # Vite HTML entry
@@ -264,10 +266,12 @@ Workflows live under [`.github/workflows/`](.github/workflows/).
 
 | Workflow | When it runs | What it does |
 |----------|----------------|--------------|
-| **`ci.yml`** | Push or pull request to **`main`** | Builds the frontend and runs **`yarn tauri:build`** on **Ubuntu 22.04**, **Windows**, and **macOS**. Uploads **`src-tauri/target/release/bundle/`** as a workflow artifact per OS (installers vary by platform). |
-| **`release.yml`** | Push a **Git tag** matching **`v*`** (e.g. `v1.0.1`) | Uses **[`tauri-action`](https://github.com/tauri-apps/tauri-action)** to build (Windows, Linux, macOS Intel + Apple Silicon) and attach installers to a **published** GitHub Release with **auto-generated release notes**. |
+| **`ci.yml`** | Push or pull request to **`main`** | Builds the frontend and runs **`yarn tauri:build`** on **Ubuntu 22.04**, **Windows**, and **macOS**. Uploads **`src-tauri/target/release/bundle/`** as a workflow artifact per OS. |
+| **`build.yml`** (**Build ProbeConfigurator**) | **`v*`** tags or **`workflow_dispatch`** | **Electron-style:** parallel **build-*** jobs (Windows, Linux, macOS ARM + Intel), then **`release`** runs **[`softprops/action-gh-release`](https://github.com/softprops/action-gh-release)** once with `generate_release_notes` and all installers attached. |
 
-**Repository setting (required for releases):** GitHub → **Settings** → **Actions** → **General** → **Workflow permissions** → enable **Read and write permissions**. Without this, `release.yml` may fail when creating the release or uploading assets.
+**Why not only `tauri-action` on a matrix?** Each matrix leg can try to manage the same GitHub Release; aggregating artifacts in a final **`release`** job matches common desktop-app CI and your Electron `build.yml`.
+
+**Repository setting (required for releases):** **Settings** → **Actions** → **General** → **Workflow permissions** → **Read and write** so the **`release`** job can create the GitHub Release and upload assets.
 
 Step-by-step tagging and publishing are in **[Release and download](#release-and-download)** above. After the workflow finishes, installers appear on the **Releases** page under **Assets** (e.g. `.exe`/`.msi`, `.dmg`, `.deb`/`.AppImage`, depending on platform). Unsigned builds may trigger SmartScreen or Gatekeeper warnings until you add code signing.
 
