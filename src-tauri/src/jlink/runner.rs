@@ -3,6 +3,7 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 use crate::error::{AppError, AppResult};
+use crate::process::NoWindow;
 
 /// Execute JLink with given stdin input, return (stdout, stderr).
 pub fn run(bin: &str, input: &str) -> AppResult<(String, String)> {
@@ -14,6 +15,7 @@ pub fn run(bin: &str, input: &str) -> AppResult<(String, String)> {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        .no_window()
         .spawn()
         .map_err(|e| AppError::JLinkNotFound(e.to_string()))?;
 

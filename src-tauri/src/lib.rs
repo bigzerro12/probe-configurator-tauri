@@ -5,6 +5,7 @@ mod download;
 mod error;
 mod jlink;
 mod platform;
+mod process;
 mod state;
 
 use commands::{download as dl, probe};

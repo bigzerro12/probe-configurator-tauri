@@ -1,6 +1,7 @@
 //! Windows-specific PATH management and search directories.
 
 use std::path::{Path, PathBuf};
+use crate::process::NoWindow;
 
 pub fn search_dirs() -> Vec<PathBuf> {
     let mut dirs = vec![];
@@ -69,6 +70,7 @@ if ($raw -notlike "*$dir*") {{
 
     let result = std::process::Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_cmd])
+        .no_window()
         .status();
 
     let _ = std::fs::remove_file(&script_path);

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::download::types::InstallResult;
 use crate::platform;
+use crate::process::NoWindow;
 
 pub async fn install(
     installer_path: &str,
@@ -41,6 +42,7 @@ async fn install_windows(
 
     let mut child = match std::process::Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_cmd])
+        .no_window()
         .spawn()
     {
         Ok(c) => c,
@@ -66,6 +68,7 @@ async fn install_windows(
             let _ = child.kill();
             let _ = std::process::Command::new("taskkill")
                 .args(["/F", "/T", "/PID", &pid.to_string()])
+                .no_window()
                 .status();
             log::info!("[install] Cancelled (pid={})", pid);
             return Ok(InstallResult {
