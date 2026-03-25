@@ -93,6 +93,8 @@ pub async fn download_jlink(app: AppHandle) -> Result<serde_json::Value, AppErro
         gen,
         64_602_096,
     );
+    #[cfg(not(target_os = "windows"))]
+    let _ = gen;
 
     Ok(serde_json::json!({
         "success": true,

@@ -76,27 +76,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "ctrlc",
- "dirs 5.0.1",
- "futures-util",
- "log",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-log",
- "tauri-plugin-shell",
- "thiserror 1.0.69",
- "tokio",
- "which",
- "winreg 0.52.0",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2820,6 +2799,27 @@ checksum = "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
 dependencies = [
  "proc-macro2",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "probe-configurator"
+version = "1.0.0"
+dependencies = [
+ "ctrlc",
+ "dirs 5.0.1",
+ "futures-util",
+ "log",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-log",
+ "tauri-plugin-shell",
+ "thiserror 1.0.69",
+ "tokio",
+ "which",
+ "winreg 0.52.0",
 ]
 
 [[package]]

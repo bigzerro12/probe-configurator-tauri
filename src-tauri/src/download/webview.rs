@@ -41,6 +41,7 @@ pub fn start_download(
     download_complete: &'static AtomicBool,
 ) -> AppResult<()> {
     let app_clone = app.clone();
+    #[cfg(target_os = "windows")]
     let save_tmp_clone = save_tmp.clone();
     #[cfg(target_os = "windows")]
     let _ = &save_final;
