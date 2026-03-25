@@ -5,5 +5,5 @@ fn main() {
     {
         let _ = ctrlc::set_handler(|| std::process::exit(0));
     }
-    app_lib::run();
+    probe_configurator_lib::run();
 }

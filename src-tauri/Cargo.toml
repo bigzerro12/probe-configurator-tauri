@@ -1,12 +1,12 @@
 [package]
-name = "app"
+name = "probe-configurator"
 version = "1.0.0"
 description = "ProbeConfigurator — SEGGER J-Link Probe Manager"
 authors = ["ProbeConfigurator Team"]
 edition = "2021"
 
 [lib]
-name = "app_lib"
+name = "probe_configurator_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

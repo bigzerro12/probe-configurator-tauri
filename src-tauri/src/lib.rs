@@ -20,7 +20,7 @@ pub fn run() {
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
-                .level_for("app_lib", log::LevelFilter::Debug)
+                .level_for("probe_configurator_lib", log::LevelFilter::Debug)
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
