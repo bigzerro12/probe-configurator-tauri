@@ -18,12 +18,12 @@ Shipping to the **Releases** tab is intentionally **not** part of **CI**: tags r
 **Ship a version (maintainers):**
 
 1. Ensure **`main`** is green (**CI** workflow).
-2. Align **semver** in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit, push to `main` if you changed the version.
-3. Tag and push (new tag each release):
+2. Align **semver** in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`. After changing `Cargo.toml`, run `cargo check --manifest-path src-tauri/Cargo.toml` (or `yarn tauri:build`) so **`src-tauri/Cargo.lock`** updates. Commit, push to `main` if you changed the version.
+3. Tag and push (new tag each release; tag = `v` + same semver, no `v` in the files above):
    ```bash
    git checkout main && git pull
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v1.0.2
+   git push origin v1.0.2
    ```
 4. **Actions** → **Build ProbeConfigurator** → wait for **build-windows**, **build-linux**, **build-macos** (universal Intel + Apple Silicon), then **release**.
 5. Open **Releases** — the run creates a **published** release with **generate_release_notes** (set **Workflow permissions** → **Read and write** if uploads fail).
@@ -275,7 +275,7 @@ Workflows live under [`.github/workflows/`](.github/workflows/).
 
 Step-by-step tagging and publishing are in **[Release and download](#release-and-download)** above. After the workflow finishes, installers appear on the **Releases** page under **Assets** (e.g. `.exe`/`.msi`, `.dmg`, `.deb`/`.AppImage`, depending on platform). Unsigned builds may trigger SmartScreen or Gatekeeper warnings until you add code signing.
 
-**Version bumps (next releases):** keep the same semver in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (no `v` prefix), commit on `main`, then push a **new** tag (e.g. `v1.0.1`).
+**Version bumps (next releases):** keep the same semver in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (no `v` prefix), refresh `src-tauri/Cargo.lock` after `Cargo.toml` edits, commit on `main`, then push a **new** tag (e.g. `v1.0.2` for app version `1.0.2`).
 
 Icons for bundling are under **`src-tauri/icons/`**. To regenerate from a 1024×1024 source PNG later: place it at `resources/icon-source.png` (un-ignore that path in `.gitignore` if needed), then from `src-tauri/` run `npx @tauri-apps/cli icon ../resources/icon-source.png`. The repo includes **`scripts/gen_icon_png.py`** as a fallback to generate a solid-color 1024×1024 PNG for that step.
 
