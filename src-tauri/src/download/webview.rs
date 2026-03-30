@@ -179,13 +179,22 @@ pub fn start_download(
                 if success {
                     #[cfg(target_os = "windows")]
                     {
-                        download_complete.store(true, Ordering::SeqCst);
+                        let _ = download_complete.compare_exchange(
+                            false, true, Ordering::SeqCst, Ordering::SeqCst,
+                        );
                         close_downloader_window(&app_clone, my_gen_capture);
                     }
 
                     #[cfg(not(target_os = "windows"))]
                     {
-                        download_complete.store(true, Ordering::SeqCst);
+                        let won = download_complete
+                            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                            .is_ok();
+                        if !won {
+                            log::info!("[download] WebView Finished — HTTP fast path already won, discarding");
+                            close_downloader_window(&app_clone, my_gen_capture);
+                            return false;
+                        }
 
                         // Use the file WebView already downloaded
                         let final_path = if let Some(ref actual) = path {

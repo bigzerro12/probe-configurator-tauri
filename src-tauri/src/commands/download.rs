@@ -53,7 +53,7 @@ pub async fn download_jlink(app: AppHandle) -> Result<serde_json::Value, AppErro
     let gen = DOWNLOAD_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
 
     // Brief delay to let pending Finished events from previous cancelled downloads drain
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
     let cfg = DownloadConfig::for_platform();
 
@@ -62,16 +62,15 @@ pub async fn download_jlink(app: AppHandle) -> Result<serde_json::Value, AppErro
         std::fs::create_dir_all(parent).map_err(|e| AppError::Io(e.to_string()))?;
     }
 
-    // Remove leftover .tmp from previous attempt
+    // Remove leftovers from previous attempt
     let _ = std::fs::remove_file(&cfg.save_tmp);
+    let http_tmp = cfg.save_tmp.with_extension("http.tmp");
+    let _ = std::fs::remove_file(&http_tmp);
 
     let save_str = cfg.save_final.to_string_lossy().to_string();
 
-    // Progress events come from webview.rs simulation thread (Linux/macOS) or poll task (Windows)
-
-    // Start WebView download (hidden browser, auto-accepts SEGGER license)
-    // Windows: saves to save_tmp (.tmp), poll task renames to save_final
-    // Linux/macOS: extracts cookies, re-downloads with reqwest to save_final
+    // Start WebView download immediately (hidden browser, auto-accepts SEGGER license).
+    // HTTP fast path runs in parallel and may win on servers that allow direct binary download.
     download::webview::start_download(
         &app,
         cfg.save_tmp.clone(),
@@ -81,6 +80,46 @@ pub async fn download_jlink(app: AppHandle) -> Result<serde_json::Value, AppErro
         &DOWNLOAD_COMPLETE,
     )?;
 
+    // Parallel HTTP fast path (separate temp file to avoid clobbering WebView's .tmp).
+    {
+        let app_http = app.clone();
+        let http_tmp_path = http_tmp.clone();
+        let final_path = cfg.save_final.clone();
+        let url = cfg.url;
+        tokio::spawn(async move {
+            match download::http::download_to_path(
+                &app_http,
+                url,
+                &http_tmp_path,
+                &final_path,
+                &DOWNLOAD_CANCELLED,
+            )
+            .await
+            {
+                Ok(()) => {
+                    if DOWNLOAD_COMPLETE
+                        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                        .is_ok()
+                    {
+                        log::info!("[download] Direct HTTP fast path completed first");
+                        let _ = app_http.emit(
+                            "download://completed",
+                            final_path.to_string_lossy().to_string(),
+                        );
+                    }
+                }
+                Err(e) => {
+                    // Expected for SEGGER (license gate). WebView is already running.
+                    log::info!(
+                        "[download] HTTP fast path unavailable ({}) — WebView will handle it",
+                        e
+                    );
+                    let _ = tokio::fs::remove_file(&http_tmp_path).await;
+                }
+            }
+        });
+    }
+
     // Poll task only needed on Windows (.tmp rename trick)
     // Linux/macOS: Finished event provides actual path directly
     #[cfg(target_os = "windows")]
@@ -89,6 +128,7 @@ pub async fn download_jlink(app: AppHandle) -> Result<serde_json::Value, AppErro
         cfg.save_tmp,
         cfg.save_final,
         &DOWNLOAD_CANCELLED,
+        &DOWNLOAD_COMPLETE,
         &DOWNLOAD_GENERATION,
         gen,
         64_602_096,
@@ -99,7 +139,7 @@ pub async fn download_jlink(app: AppHandle) -> Result<serde_json::Value, AppErro
     Ok(serde_json::json!({
         "success": true,
         "path": save_str,
-        "mode": "webview-intercept"
+        "mode": "http-or-webview"
     }))
 }
 
@@ -127,15 +167,13 @@ pub async fn cancel_download(app: AppHandle) -> Result<(), AppError> {
 
     let cfg = DownloadConfig::for_platform();
 
-    // Windows: delete .tmp file
-    if cfg.save_tmp.exists() {
-        let _ = std::fs::remove_file(&cfg.save_tmp);
-        log::info!("[download] Deleted .tmp file");
-    }
-    // Also delete partially written final file if WebView wrote there directly.
-    if cfg.save_final.exists() {
-        let _ = std::fs::remove_file(&cfg.save_final);
-        log::info!("[download] Deleted final installer file");
+    // Delete WebView .tmp, HTTP .http.tmp, and any partially written final file.
+    let http_tmp = cfg.save_tmp.with_extension("http.tmp");
+    for p in [&cfg.save_tmp, &http_tmp, &cfg.save_final] {
+        if p.exists() {
+            let _ = std::fs::remove_file(p);
+            log::info!("[download] Deleted on cancel: {}", p.display());
+        }
     }
 
     // Linux/macOS: delete only JLink file created AFTER this download started
