@@ -36,12 +36,18 @@ pub enum FirmwareUpdateResult {
 pub struct NicknameResult {
     pub success: bool,
     pub error: Option<String>,
+    /// User-visible follow-up when nickname was written but needs manual steps (e.g. replug).
+    pub warning: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UsbDriverResult {
     pub success: bool,
     pub error: Option<String>,
+    /// True when reboot command returned "Command not supported by connected probe."
+    #[serde(default)]
+    pub reboot_not_supported: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

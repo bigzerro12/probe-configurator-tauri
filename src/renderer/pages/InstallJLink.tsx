@@ -5,7 +5,7 @@ import { open } from "@tauri-apps/plugin-shell";
 import { useProbeStore } from "../store/probeStore";
 import {
   COMMANDS, EVENTS,
-  InstallResult, ScanInstallerResult, DownloadProgress,
+  InstallResult, ScanInstallerResult, DownloadProgress, ArchInfo,
 } from "@shared/types";
 
 type Phase =
@@ -16,22 +16,40 @@ type Phase =
   | 'installing'
   | 'error';
 
-// Detect platform from Tauri internals or user agent fallback
-const detectPlatform = (): "win32" | "darwin" | "linux" => {
+// UA-based platform detection used as an immediate fallback until get_arch_info resolves.
+const uaPlatform = (): "win32" | "darwin" | "linux" => {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes("win")) return "win32";
   if (ua.includes("mac")) return "darwin";
   return "linux";
 };
-const currentPlatform = detectPlatform();
 
 const PLATFORM_COPY = {
-  win32:  { installerLabel: "J-Link Windows Installer (.exe)", elevationNote: "A UAC prompt will appear — click Yes to allow installation.", installingNote: "Installing silently in the background...", downloadBtnLabel: "⬇️ Download & Install J-Link Software", installBtnLabel: "🛠️ Install J-Link Software" },
-  darwin: { installerLabel: "J-Link macOS Package (.pkg)", elevationNote: "An administrator password prompt will appear.", installingNote: "Running installer — this may take a minute...", downloadBtnLabel: "⬇️ Download & Install J-Link Software", installBtnLabel: "🛠️ Install J-Link Package" },
-  linux:  { installerLabel: "J-Link Linux Package (.deb)", elevationNote: "A privilege prompt (pkexec) will appear.", installingNote: "Running dpkg installer — this may take a minute...", downloadBtnLabel: "⬇️ Download & Install J-Link Software", installBtnLabel: "🛠️ Install J-Link Package" },
+  win32:  { elevationNote: "A UAC prompt will appear — click Yes to allow installation.", installingNote: "Installing silently in the background...", downloadBtnLabel: "⬇️ Download & Install J-Link Software", installBtnLabel: "🛠️ Install J-Link Software" },
+  darwin: { elevationNote: "An administrator password prompt will appear.", installingNote: "Running installer — this may take a minute...", downloadBtnLabel: "⬇️ Download & Install J-Link Software", installBtnLabel: "🛠️ Install J-Link Package" },
+  linux:  { elevationNote: "A privilege prompt (pkexec) will appear.", installingNote: "Running dpkg installer — this may take a minute...", downloadBtnLabel: "⬇️ Download & Install J-Link Software", installBtnLabel: "🛠️ Install J-Link Package" },
 };
 
-const copy = PLATFORM_COPY[currentPlatform] ?? PLATFORM_COPY.win32;
+/** Builds an arch-specific installer label using info returned by the Rust backend. */
+function getInstallerLabel(archInfo: ArchInfo | null): string {
+  if (!archInfo) return "J-Link Software Installer";
+  const { os, arch } = archInfo;
+  if (os === "windows") {
+    if (arch === "aarch64") return "J-Link Windows Installer (ARM64, .exe)";
+    if (arch === "x86")     return "J-Link Windows Installer (32-bit, .exe)";
+    return "J-Link Windows Installer (64-bit, .exe)";
+  }
+  if (os === "macos") {
+    if (arch === "aarch64") return "J-Link macOS Package (Apple Silicon, .pkg)";
+    if (arch === "x86_64")  return "J-Link macOS Package (Intel, .pkg)";
+    return "J-Link macOS Package (Universal, .pkg)";
+  }
+  // Linux
+  if (arch === "aarch64") return "J-Link Linux Package (ARM64, .deb)";
+  if (arch === "arm")     return "J-Link Linux Package (ARM 32-bit, .deb)";
+  if (arch === "x86")     return "J-Link Linux Package (32-bit, .deb)";
+  return "J-Link Linux Package (64-bit, .deb)";
+}
 
 export default function InstallJLink() {
   const { checkInstallation, isLoading } = useProbeStore();
@@ -42,6 +60,14 @@ export default function InstallJLink() {
   const [progressLabel, setProgressLabel]        = useState<string>('');
   const [statusMessage, setStatusMessage]        = useState<string>('');
   const [errorMessage, setErrorMessage]          = useState<string>('');
+  const [archInfo, setArchInfo]                  = useState<ArchInfo | null>(null);
+
+  // Derive platform and copy from live arch info; fall back to UA until the command resolves.
+  const platform = archInfo
+    ? (archInfo.os === "windows" ? "win32" : archInfo.os === "macos" ? "darwin" : "linux")
+    : uaPlatform();
+  const copy           = PLATFORM_COPY[platform] ?? PLATFORM_COPY.win32;
+  const installerLabel = getInstallerLabel(archInfo);
 
   // Keep refs to all active listeners so we can cancel them
   const listenersRef = useRef<UnlistenFn[]>([]);
@@ -53,6 +79,11 @@ export default function InstallJLink() {
   };
 
   useEffect(() => {
+    // Fetch arch info and installer scan in parallel
+    invoke<ArchInfo>(COMMANDS.GET_ARCH_INFO)
+      .then(setArchInfo)
+      .catch(() => { /* leave archInfo null — UA fallback stays active */ });
+
     (async () => {
       try {
         const result = await invoke<ScanInstallerResult>(COMMANDS.SCAN_FOR_INSTALLER);
@@ -226,16 +257,16 @@ export default function InstallJLink() {
           <h2>J-Link Software Not Found</h2>
           <p>SEGGER J-Link Software is required to use this application.</p>
 
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#6c757d' }}>
-            {currentPlatform === 'win32' && '🪟 Windows — will download ' + copy.installerLabel}
-            {currentPlatform === 'darwin' && '🍎 macOS — will download ' + copy.installerLabel}
-            {currentPlatform === 'linux' && '🐧 Linux — will download ' + copy.installerLabel}
+          <div style={{ marginTop: '8px', fontSize: '13px', color: '#6c757d' }}>
+            {platform === 'win32'  && `🪟 Windows — will download ${installerLabel}`}
+            {platform === 'darwin' && `🍎 macOS — will download ${installerLabel}`}
+            {platform === 'linux'  && `🐧 Linux — will download ${installerLabel}`}
           </div>
 
           <div style={{ marginTop: '24px' }}>
 
             {phase === 'checking' && (
-              <div style={{ color: '#6c757d', fontSize: '14px' }}>🔍 Checking for existing installer...</div>
+              <div style={{ color: '#6c757d', fontSize: '13px' }}>🔍 Checking for existing installer...</div>
             )}
 
             {phase === 'downloading' && (
@@ -265,7 +296,7 @@ export default function InstallJLink() {
               <div style={{ marginBottom: '20px', padding: '14px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
                 <div style={{ fontWeight: 600, marginBottom: '6px', color: '#495057' }}>⚙️ Installing J-Link...</div>
                 <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>{statusMessage}</div>
-                <div style={{ fontSize: '12px', color: '#adb5bd' }}>{copy.installingNote}</div>
+                <div style={{ fontSize: '13px', color: '#adb5bd' }}>{copy.installingNote}</div>
               </div>
             )}
 
@@ -273,7 +304,7 @@ export default function InstallJLink() {
               <div style={{ marginBottom: '20px', padding: '14px', backgroundColor: '#fff0f0', borderRadius: '8px', border: '1px solid #ffcccc' }}>
                 <div style={{ fontWeight: 600, marginBottom: '6px', color: '#721c24' }}>❌ Error</div>
                 <div style={{ fontSize: '13px', color: '#721c24', marginBottom: '8px' }}>{errorMessage}</div>
-                <div style={{ fontSize: '12px', color: '#6c757d' }}>
+                <div style={{ fontSize: '13px', color: '#6c757d' }}>
                   You can also install J-Link manually from{' '}
                   <a href="#" onClick={(e) => { e.preventDefault(); open('https://www.segger.com/downloads/jlink/'); }}
                     style={{ color: '#007bff', cursor: 'pointer' }}>
@@ -315,7 +346,7 @@ export default function InstallJLink() {
             </div>
 
             {!isBusy && phase !== 'checking' && (
-              <div style={{ marginTop: '16px', fontSize: '12px', color: '#adb5bd', textAlign: 'center' }}>
+              <div style={{ marginTop: '16px', fontSize: '13px', color: '#adb5bd', textAlign: 'center' }}>
                 Prefer to install manually?{' '}
                 <a href="#" onClick={(e) => { e.preventDefault(); open('https://www.segger.com/downloads/jlink/'); }}
                   style={{ color: '#6c757d', cursor: 'pointer' }}>

@@ -51,7 +51,7 @@ interface ProbeState {
   error: string | null;
   firmwareUpdateStatus: "idle" | "updating" | "updated" | "current" | "failed";
   firmwareUpdateMessage: string;
-  nicknameStatus: "idle" | "setting" | "success" | "failed";
+  nicknameStatus: "idle" | "setting" | "success" | "warning" | "failed";
   nicknameMessage: string;
   usbDriverStatus: "idle" | "switching" | "success" | "failed";
   usbDriverMessage: string;
@@ -105,7 +105,10 @@ export const useProbeStore = create<ProbeState>((set, get) => ({
         ...resetOperationStatus(),
       });
     } catch (err) {
+      // isInstalled must not stay null — that causes the app to show "Checking..."
+      // forever. Fall back to false so the user at least sees a recoverable screen.
       set({
+        isInstalled: false,
         error: err instanceof Error ? err.message : String(err),
         isLoading: false,
       });
@@ -199,12 +202,19 @@ export const useProbeStore = create<ProbeState>((set, get) => ({
         nickname,
       });
       if (result.success) {
-        set({
-          nicknameStatus: "success",
-          nicknameMessage: nickname.trim()
-            ? `Nickname set to "${nickname.trim()}".`
-            : "Nickname cleared.",
-        });
+        if (result.warning) {
+          set({
+            nicknameStatus: "warning",
+            nicknameMessage: result.warning,
+          });
+        } else {
+          set({
+            nicknameStatus: "success",
+            nicknameMessage: nickname.trim()
+              ? `Nickname was set to "${nickname.trim()}".`
+              : "Nickname cleared.",
+          });
+        }
         // Probe rebooted — re-scan after delay to reflect updated nickname
         await new Promise(resolve => setTimeout(resolve, 500));
         await get().scanProbesSilent();
@@ -257,11 +267,19 @@ export const useProbeStore = create<ProbeState>((set, get) => ({
       await new Promise((resolve) => setTimeout(resolve, 900));
       await get().scanProbesSilent();
 
+      const unplug = " You may need to unplug and replug your probe to apply the configuration changes.";
+      const withRebootBrief = " The probe may reboot briefly.";
+      const winMsg =
+        "Switched to WinUSB." +
+        (result.rebootNotSupported ? "" : withRebootBrief) +
+        unplug;
+      const seggerMsg =
+        "Switched to SEGGER." +
+        (result.rebootNotSupported ? "" : withRebootBrief) +
+        unplug;
       set({
         usbDriverStatus: "success",
-        usbDriverMessage: mode === "winUsb"
-          ? "Switched to WinUSB. The probe may reboot briefly. You may need to unplug and replug your probe to apply the configuration changes."
-          : "Switched to SEGGER. The probe may reboot briefly. You may need to unplug and replug your probe to apply the configuration changes.",
+        usbDriverMessage: mode === "winUsb" ? winMsg : seggerMsg,
       });
     } catch (err) {
       set({

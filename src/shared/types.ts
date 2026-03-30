@@ -52,6 +52,7 @@ export type FirmwareUpdateResult =
 export type NicknameResult = {
   success: boolean;
   error?: string;
+  warning?: string;
 };
 
 export type InstallResult = {
@@ -78,6 +79,16 @@ export type UsbDriverMode = "winUsb" | "segger";
 export type UsbDriverResult = {
   success: boolean;
   error?: string;
+  /** When true, reboot is not available on probe firmware — omit "may reboot briefly" in UI */
+  rebootNotSupported?: boolean;
+};
+
+/** Returned by the `get_arch_info` command. Values match `std::env::consts` on the Rust side. */
+export type ArchInfo = {
+  /** e.g. "windows" | "macos" | "linux" */
+  os: string;
+  /** e.g. "x86_64" | "x86" | "aarch64" | "arm" */
+  arch: string;
 };
 
 // ─── Tauri Command Names ──────────────────────────────────────────────────────
@@ -89,6 +100,7 @@ export const COMMANDS = {
   SWITCH_USB_DRIVER:  "switch_usb_driver",
   UPDATE_FIRMWARE:    "update_firmware",
   SET_NICKNAME:       "set_nickname",
+  GET_ARCH_INFO:      "get_arch_info",
   // Download / Install
   SCAN_FOR_INSTALLER: "scan_for_installer",
   DOWNLOAD_JLINK:     "download_jlink",

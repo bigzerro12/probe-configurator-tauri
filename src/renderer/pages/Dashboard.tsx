@@ -80,7 +80,6 @@ export default function Dashboard() {
           <p className="app-description">
             A tool for viewing information and performing basic configuration of all connected hardware debug probes.
           </p>
-          <div className="platform-badge">Tauri</div>
         </header>
 
         {/* Error Display */}
@@ -219,17 +218,21 @@ export default function Dashboard() {
                 marginTop: "12px", padding: "10px 14px", borderRadius: "6px",
                 backgroundColor:
                   nicknameStatus === "success" ? "#d4edda" :
+                  nicknameStatus === "warning" ? "#fff3cd" :
                   nicknameStatus === "setting"  ? "#d1ecf1" : "#fff0f0",
                 border: `1px solid ${
                   nicknameStatus === "success" ? "#c3e6cb" :
+                  nicknameStatus === "warning" ? "#ffc107" :
                   nicknameStatus === "setting"  ? "#bee5eb" : "#ffcccc"}`,
                 fontSize: "13px",
                 color:
                   nicknameStatus === "success" ? "#155724" :
+                  nicknameStatus === "warning" ? "#856404" :
                   nicknameStatus === "setting"  ? "#0c5460" : "#721c24",
               }}>
                 {nicknameStatus === "setting" && "⏳ Setting nickname..."}
                 {nicknameStatus === "success" && `✅ ${nicknameMessage}`}
+                {nicknameStatus === "warning"  && `⚠️ ${nicknameMessage}`}
                 {nicknameStatus === "failed"  && `❌ ${nicknameMessage}`}
               </div>
             )}

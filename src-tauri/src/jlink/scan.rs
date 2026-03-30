@@ -12,12 +12,15 @@ pub fn scan_probes(bin: &str) -> AppResult<Vec<Probe>> {
     log::info!("[jlink] Found {} probes", probes.len());
 
     if !probes.is_empty() {
+        log::info!("[jlink] Fetching firmware dates for {} probe(s)...", probes.len());
         let firmware = fetch_firmware_dates(bin, probes.len());
+        log::info!("[jlink] Firmware fetch complete");
         for (i, probe) in probes.iter_mut().enumerate() {
             probe.firmware = firmware.get(i).and_then(|f| f.clone());
         }
     }
 
+    log::info!("[jlink] scan_probes complete — returning {} probe(s)", probes.len());
     Ok(probes)
 }
 

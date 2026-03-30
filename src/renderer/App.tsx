@@ -1,7 +1,29 @@
 import { useEffect } from "react";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useProbeStore } from "./store/probeStore";
 import Dashboard from "./pages/Dashboard";
 import InstallJLink from "./pages/InstallJLink";
+
+const BODY_PADDING = 24; // 12px top + 12px bottom (matches body padding in styles.css)
+
+// Resize only the window HEIGHT to fit content; preserves whatever width the user has set.
+async function resizeHeightToContent() {
+  await new Promise<void>((r) => setTimeout(r, 80)); // wait one paint for DOM to settle
+  const card =
+    document.querySelector<HTMLElement>(".app-card") ??
+    document.querySelector<HTMLElement>(".message-card");
+  if (!card) return;
+  const targetHeight = card.scrollHeight + BODY_PADDING;
+  try {
+    const win = getCurrentWindow();
+    // outerSize() is in physical pixels; divide by scaleFactor to get logical pixels
+    const [physicalSize, scale] = await Promise.all([win.outerSize(), win.scaleFactor()]);
+    const currentLogicalWidth = Math.round(physicalSize.width / scale);
+    await win.setSize(new LogicalSize(currentLogicalWidth, targetHeight));
+  } catch (e) {
+    console.error("[App] window resize failed:", e);
+  }
+}
 
 export default function App() {
   const { isInstalled, isLoading, checkInstallation } = useProbeStore();
@@ -13,6 +35,12 @@ export default function App() {
       console.error("[App] checkInstallation failed:", err);
     });
   }, []); // empty deps — run once on mount only
+
+  // Auto-resize the window to match card content whenever the page changes
+  useEffect(() => {
+    if (isInstalled === null) return; // still loading — skip
+    resizeHeightToContent();
+  }, [isInstalled]);
 
   // Phase 1: still checking — show spinner
   if (isInstalled === null) {

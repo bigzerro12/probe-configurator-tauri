@@ -34,6 +34,7 @@ pub async fn detect_and_scan(
         vec![]
     };
 
+    log::info!("[cmd] detect_and_scan complete — installed={} probes={}", status.installed, probes.len());
     Ok(serde_json::json!({ "status": status, "probes": probes }))
 }
 
@@ -72,6 +73,16 @@ pub async fn update_firmware(
     let bin = state.get();
     Ok(tokio::task::spawn_blocking(move || jlink::firmware::update(&bin, probe_index))
         .await?)
+}
+
+/// Returns the compiled OS and CPU architecture of this binary.
+/// Values come from `std::env::consts` so they always match the actual build target.
+#[tauri::command]
+pub fn get_arch_info() -> serde_json::Value {
+    serde_json::json!({
+        "os":   std::env::consts::OS,
+        "arch": std::env::consts::ARCH,
+    })
 }
 
 /// Set or clear nickname for the probe at given index.

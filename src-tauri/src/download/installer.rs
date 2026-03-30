@@ -57,6 +57,8 @@ async fn install_windows(
         .unwrap_or_default()
         .as_millis();
     let start = std::time::Instant::now();
+    // True once the PowerShell -Wait process has exited (installer fully done).
+    let mut ps_exited = false;
     let mut dll_check_ticker: u64 = 0;
 
     loop {
@@ -78,44 +80,78 @@ async fn install_windows(
         }
 
         // Check if PowerShell exited
-        match child.try_wait() {
-            Ok(Some(s)) if !s.success() => {
-                return Ok(InstallResult {
-                    success: false, cancelled: Some(true),
-                    message: "UAC denied or installation failed.".to_string(), path: None,
-                });
+        if !ps_exited {
+            match child.try_wait() {
+                Ok(Some(s)) if !s.success() => {
+                    return Ok(InstallResult {
+                        success: false, cancelled: Some(true),
+                        message: "UAC denied or installation failed.".to_string(), path: None,
+                    });
+                }
+                Ok(Some(_)) => {
+                    ps_exited = true; // PowerShell -Wait exited → installer fully done
+                    log::info!("[install] PowerShell exited — checking for J-Link");
+                }
+                Ok(None) => {}    // Still running
+                Err(e) => return Ok(InstallResult {
+                    success: false, cancelled: None,
+                    message: format!("Process error: {}", e), path: None,
+                }),
             }
-            Ok(Some(_)) => {} // Exited successfully — keep polling for DLL
-            Ok(None) => {}    // Still running
-            Err(e) => return Ok(InstallResult {
-                success: false, cancelled: None,
-                message: format!("Process error: {}", e), path: None,
-            }),
         }
 
-        // Check DLL every ~1s (not every 300ms)
+        // Check DLL every ~1s while the installer is running.
+        // Once PS has exited, check every cycle (installer is done, just waiting for FS).
         dll_check_ticker += 1;
-        if dll_check_ticker % 3 == 0 {
+        if dll_check_ticker % 3 == 0 || ps_exited {
             if let Some(dir) = platform::find_jlink_in_search_dirs() {
                 let dll = dir.join("JLink_x64.dll");
-                if let Ok(meta) = std::fs::metadata(&dll) {
-                    if let Ok(mtime) = meta.modified() {
-                        let mtime_ms = mtime
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_millis();
-                        if mtime_ms >= install_start_ms {
-                            let dir_str = dir.to_string_lossy().to_string();
-                            platform::add_to_system_path(&dir);
-                            log::info!("[install] Complete: {}", dir_str);
-                            return Ok(InstallResult {
-                                success: true, cancelled: None,
-                                message: "J-Link installed successfully.".to_string(),
-                                path: Some(dir_str),
-                            });
-                        }
-                    }
+                let dll_exists = std::fs::metadata(&dll).is_ok();
+
+                // While the installer is still running, require a fresh DLL mtime to avoid
+                // falsely accepting a pre-existing install before the new one is complete.
+                // Once PowerShell (-Wait) has returned, the installer is done — the DLL
+                // merely existing is sufficient (reinstalling the same version won't update mtimes).
+                let accept = if ps_exited {
+                    dll_exists
+                } else {
+                    std::fs::metadata(&dll)
+                        .and_then(|m| m.modified())
+                        .map(|mtime| {
+                            mtime.duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_millis() >= install_start_ms
+                        })
+                        .unwrap_or(false)
+                };
+
+                if accept {
+                    let dir_str = dir.to_string_lossy().to_string();
+                    log::info!("[install] Complete: {}", dir_str);
+                    return Ok(InstallResult {
+                        success: true, cancelled: None,
+                        message: "J-Link installed successfully.".to_string(),
+                        path: Some(dir_str),
+                    });
                 }
+
+                // PS exited but DLL not yet visible — give a brief grace period then fail.
+                if ps_exited && start.elapsed().as_secs() > 15 {
+                    log::warn!("[install] PowerShell exited but J-Link DLL not found after grace period");
+                    return Ok(InstallResult {
+                        success: false, cancelled: None,
+                        message: "Installation finished but J-Link was not detected. Please try again.".to_string(),
+                        path: None,
+                    });
+                }
+            } else if ps_exited && start.elapsed().as_secs() > 15 {
+                // PS exited but no J-Link directory found at all.
+                log::warn!("[install] PowerShell exited but no J-Link directory found");
+                return Ok(InstallResult {
+                    success: false, cancelled: None,
+                    message: "Installation finished but J-Link was not detected. Please try again.".to_string(),
+                    path: None,
+                });
             }
         }
 

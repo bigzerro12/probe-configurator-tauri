@@ -45,27 +45,87 @@ impl DownloadConfig {
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default())
                 .join("AppData").join("Roaming").join("SEGGER");
+            let (url, filename): (&'static str, &'static str) = if cfg!(target_arch = "aarch64") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Windows_arm64.exe",
+                    "JLink_Windows_arm64.exe",
+                )
+            } else if cfg!(target_arch = "x86") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Windows.exe",
+                    "JLink_Windows.exe",
+                )
+            } else {
+                // x86_64 — default
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Windows_x86_64.exe",
+                    "JLink_Windows_x86_64.exe",
+                )
+            };
+            let save_final = segger.join(filename);
             DownloadConfig {
-                url: "https://www.segger.com/downloads/jlink/JLink_Windows_x86_64.exe",
-                save_tmp: segger.join("JLink_Windows_x86_64.tmp"),
-                save_final: segger.join("JLink_Windows_x86_64.exe"),
-                scan_path: segger.join("JLink_Windows_x86_64.exe"),
+                url,
+                save_tmp:  save_final.with_extension("tmp"),
+                scan_path: save_final.clone(),
+                save_final,
             }
         } else if cfg!(target_os = "macos") {
             let dl = dirs::download_dir().unwrap_or_default();
+            let (url, filename): (&'static str, &'static str) = if cfg!(target_arch = "aarch64") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_MacOSX_arm64.pkg",
+                    "JLink_MacOSX_arm64.pkg",
+                )
+            } else if cfg!(target_arch = "x86_64") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_MacOSX.pkg",
+                    "JLink_MacOSX.pkg",
+                )
+            } else {
+                // Universal fallback
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_MacOSX_universal.pkg",
+                    "JLink_MacOSX_universal.pkg",
+                )
+            };
+            let save_final = dl.join(filename);
             DownloadConfig {
-                url: "https://www.segger.com/downloads/jlink/JLink_MacOSX_universal.pkg",
-                save_tmp: dl.join("JLink_MacOSX_universal.tmp"),
-                save_final: dl.join("JLink_MacOSX_universal.pkg"),
-                scan_path: dl.join("JLink_MacOSX_universal.pkg"),
+                url,
+                save_tmp:  save_final.with_extension("tmp"),
+                scan_path: save_final.clone(),
+                save_final,
             }
         } else {
+            // Linux
             let dl = dirs::download_dir().unwrap_or_default();
+            let (url, filename): (&'static str, &'static str) = if cfg!(target_arch = "aarch64") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Linux_arm64.deb",
+                    "JLink_Linux_arm64.deb",
+                )
+            } else if cfg!(target_arch = "arm") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Linux_arm.deb",
+                    "JLink_Linux_arm.deb",
+                )
+            } else if cfg!(target_arch = "x86") {
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Linux_i386.deb",
+                    "JLink_Linux_i386.deb",
+                )
+            } else {
+                // x86_64 — default
+                (
+                    "https://www.segger.com/downloads/jlink/JLink_Linux_x86_64.deb",
+                    "JLink_Linux_x86_64.deb",
+                )
+            };
+            let save_final = dl.join(filename);
             DownloadConfig {
-                url: "https://www.segger.com/downloads/jlink/JLink_Linux_x86_64.deb",
-                save_tmp: dl.join("JLink_Linux_x86_64.tmp"),
-                save_final: dl.join("JLink_Linux_x86_64.deb"),
-                scan_path: dl.join("JLink_Linux_x86_64.deb"),
+                url,
+                save_tmp:  save_final.with_extension("tmp"),
+                scan_path: save_final.clone(),
+                save_final,
             }
         }
     }

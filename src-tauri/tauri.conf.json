@@ -14,10 +14,10 @@
     "windows": [
       {
         "title": "ProbeConfigurator",
-        "width": 800,
-        "height": 950,
-        "minWidth": 700,
-        "minHeight": 650,
+        "width": 770,
+        "height": 640,
+        "minWidth": 500,
+        "minHeight": 400,
         "resizable": true,
         "fullscreen": false
       }

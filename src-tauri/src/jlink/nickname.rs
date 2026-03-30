@@ -14,7 +14,13 @@ pub fn set(bin: &str, probe_index: usize, nickname: &str) -> NicknameResult {
     let write_input = scripts::set_nickname_write(probe_index, nickname_trimmed);
     let write_stdout = match runner::run(bin, &write_input) {
         Ok((stdout, _)) => stdout,
-        Err(e) => return NicknameResult { success: false, error: Some(e.to_string()) },
+        Err(e) => {
+            return NicknameResult {
+                success: false,
+                error: Some(e.to_string()),
+                warning: None,
+            };
+        }
     };
 
     log::debug!("[jlink] set_nickname write stdout:\n{}", write_stdout);
@@ -23,6 +29,7 @@ pub fn set(bin: &str, probe_index: usize, nickname: &str) -> NicknameResult {
         return NicknameResult {
             success: false,
             error: Some("Invalid nickname: only ASCII characters, no double quotes.".to_string()),
+            warning: None,
         };
     }
 
@@ -33,6 +40,7 @@ pub fn set(bin: &str, probe_index: usize, nickname: &str) -> NicknameResult {
                 "J-Link rejected the nickname command: {}",
                 last_non_empty_line(&write_stdout)
             )),
+            warning: None,
         };
     }
 
@@ -43,6 +51,7 @@ pub fn set(bin: &str, probe_index: usize, nickname: &str) -> NicknameResult {
                 "Unexpected response from J-Link after setting nickname: {}",
                 last_non_empty_line(&write_stdout)
             )),
+            warning: None,
         };
     }
 
@@ -91,12 +100,19 @@ pub fn set(bin: &str, probe_index: usize, nickname: &str) -> NicknameResult {
 
     if !applied {
         if reboot_unsupported {
+            let warning = if nickname_trimmed.is_empty() {
+                "Nickname was cleared, but this probe firmware does not support reboot via command. Unplug and replug the probe, then press Refresh list to apply the change."
+                    .to_string()
+            } else {
+                format!(
+                    "Nickname was set to '{}', but this probe firmware does not support reboot via command. Unplug and replug the probe, then press Refresh list to apply the change.",
+                    nickname_trimmed
+                )
+            };
             return NicknameResult {
-                success: false,
-                error: Some(
-                    "Nickname was accepted, but this probe firmware does not support reboot via command. Update probe firmware, or unplug and re-plug the probe, then refresh the list."
-                        .to_string(),
-                ),
+                success: true,
+                error: None,
+                warning: Some(warning),
             };
         }
 
@@ -106,10 +122,15 @@ pub fn set(bin: &str, probe_index: usize, nickname: &str) -> NicknameResult {
                 "Nickname command was accepted, but the new name is not visible yet. Unplug and re-plug the probe, then refresh the list."
                     .to_string(),
             ),
+            warning: None,
         };
     }
 
-    NicknameResult { success: true, error: None }
+    NicknameResult {
+        success: true,
+        error: None,
+        warning: None,
+    }
 }
 
 fn write_succeeded(stdout: &str) -> bool {

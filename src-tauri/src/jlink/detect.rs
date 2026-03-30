@@ -37,18 +37,14 @@ fn detect_from_dir(dir: &Path, global_bin: &str, executable: &str) -> InstallSta
     let dir_str = dir.to_string_lossy().to_string();
 
     log::info!("[jlink] Found at: {}", full_path_str);
+    // Add the directory to this process's in-memory PATH so all subsequent
+    // JLink invocations can use the short name ("JLink") without a full path.
+    // No changes are made to the user or system environment.
     platform::prepend_to_process_path(&dir_str);
-
-    let persisted = platform::add_to_system_path(dir);
-    if persisted {
-        log::info!("[jlink] System PATH updated persistently");
-    } else {
-        log::warn!("[jlink] System PATH not persisted — using process PATH for this session");
-    }
 
     if let Ok((stdout, _)) = runner::run(global_bin, scripts::detect()) {
         if let Some(version) = runner::parse_version(&stdout) {
-            log::info!("[jlink] Running globally: {}", global_bin);
+            log::info!("[jlink] Running via process PATH: {}", global_bin);
             return InstallStatus { installed: true, path: Some(full_path_str), version: Some(version) };
         }
     }

@@ -1,6 +1,6 @@
 //! Platform abstraction for PATH management and JLink search directories.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[cfg(target_os = "windows")]
 pub mod windows;
@@ -73,14 +73,4 @@ pub fn prepend_to_process_path(dir: &str) {
         let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
         std::env::set_var(&path_key, format!("{}{}{}", current, separator, dir));
     }
-}
-
-/// Add dir to system PATH persistently. Returns true if successful.
-pub fn add_to_system_path(dir: &Path) -> bool {
-    #[cfg(target_os = "windows")]
-    return windows::add_to_system_path(dir);
-    #[cfg(target_os = "macos")]
-    return macos::add_to_system_path(dir);
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    return linux::add_to_system_path(dir);
 }

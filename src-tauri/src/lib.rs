@@ -31,6 +31,7 @@ pub fn run() {
             probe::switch_usb_driver,
             probe::update_firmware,
             probe::set_nickname,
+            probe::get_arch_info,
             // Download / Install
             dl::scan_for_installer,
             dl::download_jlink,

@@ -27,8 +27,6 @@ which = "6"
 ctrlc = "3"
 thiserror = "1"
 
-[target.'cfg(windows)'.dependencies]
-winreg = "0.52"
 
 [profile.release]
 opt-level = "s"   # optimize for size
