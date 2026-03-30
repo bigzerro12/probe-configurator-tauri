@@ -37,3 +37,6 @@ coverage/
 
 # ── Icon source (keep generated icons, ignore raw source) ─────────────────────
 resources/icon-source.png
+
+# ── Git Bash / Windows oddities ───────────────────────────────────────────────
+nul
